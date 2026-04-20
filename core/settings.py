@@ -42,6 +42,11 @@ INSTALLED_APPS = [
     'attendance',
     'payroll',
 ]
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -81,8 +86,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'sirh_db',  
         'USER': 'admin',    
-        'PASSWORD': '',            
-        'HOST': 'localhost',
+        'PASSWORD': 'admin',            
+        'HOST': '127.0.0.1',
         'PORT': '5432',
     }
 }

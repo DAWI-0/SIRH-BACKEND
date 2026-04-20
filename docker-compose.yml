@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: sirh_db     
       POSTGRES_USER: admin             
-      POSTGRES_HOST_AUTH_METHOD: trust 
+      POSTGRES_PASSWORD: admin 
     ports:
       - "5432:5432"
     volumes:
