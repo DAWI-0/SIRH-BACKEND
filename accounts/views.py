@@ -21,3 +21,23 @@ class CreateManagerRHView(generics.CreateAPIView):
     queryset = ManagerRH.objects.all()
     serializer_class = ManagerRHSerializer
     permission_classes = [IsAdministrateur]
+    # accounts/views.py
+# (Garde tes imports et tes vues CreateEmployeView / CreateManagerRHView existants)
+
+class EmployeListView(generics.ListAPIView):
+    """
+    Endpoint pour lister tous les employés (Read All).
+    Accessible par l'Administrateur et le Manager RH.
+    """
+    queryset = Employe.objects.all()
+    serializer_class = EmployeSerializer
+    permission_classes = [IsAdminOrRH]
+
+class EmployeDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Endpoint pour Consulter (Read One), Modifier (Update) ou Supprimer (Delete) un employé.
+    Accessible par l'Administrateur et le Manager RH.
+    """
+    queryset = Employe.objects.all()
+    serializer_class = EmployeSerializer
+    permission_classes = [IsAdminOrRH]
