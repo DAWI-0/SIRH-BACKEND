@@ -8,6 +8,13 @@ class ContratListCreateView(generics.ListCreateAPIView):
     permission_classes = []
     authentication_classes = []
 
+# 👇 NOUVELLE VUE AJOUTÉE POUR LA MODIFICATION 👇
+class ContratDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Contrat.objects.all()
+    serializer_class = ContratSerializer
+    permission_classes = []
+    authentication_classes = []
+
 class EvaluationListCreateView(generics.ListCreateAPIView):
     queryset = Evaluation.objects.all()
     serializer_class = EvaluationSerializer
