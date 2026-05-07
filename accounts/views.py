@@ -77,12 +77,13 @@ class EmployeDetailView(generics.RetrieveUpdateDestroyAPIView):
                 "motif_depart": nouveau_statut,
                 "employe_nom": employe.username,
                 "poste_a_pourvoir": employe.poste_titre,
+                "competences_cles": employe.matrice_competences
             }
             try:
                 requests.post(webhook_url, json=payload, timeout=2)
-                print(f"🔥 ALERTE n8n ENVOYÉE : Départ de {employe.username} ({nouveau_statut})")
+                print(f"ALERTE n8n ENVOYÉE : Départ de {employe.username} ({nouveau_statut})")
             except Exception as e:
-                print(f"⚠️ Erreur Webhook n8n : {e}")
+                print(f"Erreur Webhook n8n : {e}")
 
             # 3. SUPPRESSION : On supprime l'utilisateur de la base active (ce qui bloque aussi sa connexion)
             employe.delete()
