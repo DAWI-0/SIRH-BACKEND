@@ -1,5 +1,4 @@
 from django.contrib import admin
-from .models import PointageIoT, DemandeConge
+from .models import PointageIoT
 
 admin.site.register(PointageIoT)
-admin.site.register(DemandeConge)

@@ -1,10 +1,7 @@
 from django.urls import path
-from .views import IoTPontageView, PointageListView
+from .views import PointageIoTListView
 
 urlpatterns = [
-    # Route pour le script Python (POST)
-    path('iot/upload/', IoTPontageView.as_view(), name='iot-upload'),
-    
     # Route pour React (GET) - AJOUTE BIEN LE SLASH À LA FIN
-    path('pointages/', PointageListView.as_view(), name='pointages-list'),
+    path('pointages/', PointageIoTListView.as_view(), name='pointages-list'),
 ]

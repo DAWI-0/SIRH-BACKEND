@@ -1,32 +1,24 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, generics
-from rest_framework.permissions import IsAuthenticated
 from .models import PointageIoT
-from .serializers import PointageIoTSerializer
-class IoTPontageView(APIView):
-    # Pour l'instant on désactive l'authentification par token utilisateur 
-    # car c'est une machine (l'ESP32) qui envoie la donnée
-    permission_classes = [] 
-    authentication_classes = []
 
-    def post(self, request):
-        # 1. On donne les données JSON reçues (request.data) au Serializer
-        serializer = PointageIoTSerializer(data=request.data)
+class PointageIoTListView(APIView):
+    def get(self, request):
+        # On récupère les pointages du plus récent au plus ancien
+        pointages = PointageIoT.objects.all().order_by('-timestamp')
         
-        # 2. Le Serializer vérifie si les données sont propres et correspondent à ton Modèle
-        if serializer.is_valid():
-            # 3. LA LIGNE MAGIQUE : Sauvegarde réelle dans la base PostgreSQL
-            serializer.save() 
-            
-            # On dit au Bridge que tout s'est bien passé
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
-        # Si la donnée est mauvaise (ex: format de date incorrect), on renvoie une erreur
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        # --- 2. NOUVELLE VUE POUR REACT (Lecture seule) ---
-class PointageListView(generics.ListAPIView):
-    # On trie du plus récent au plus ancien avec le signe "-"
-    queryset = PointageIoT.objects.all().order_by('-timestamp') 
-    serializer_class = PointageIoTSerializer
-    permission_classes = [IsAuthenticated] # Sécurité activée !
+        data = []
+        for p in pointages:
+            data.append({
+                "timestamp": p.timestamp,
+                "employe_name": p.employe.username, # 👈 IMPORTANT: React cherche ce nom
+                "matricule": p.employe.matricule,
+                "type_pointage": p.type_pointage,
+                "id_capteur": p.id_capteur,
+                "est_justifie": p.est_justifie
+            })
+        return Response(data)
+
+    def delete(self, request):
+        PointageIoT.objects.all().delete()
+        return Response({"message": "Historique vidé"})

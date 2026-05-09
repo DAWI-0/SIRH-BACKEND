@@ -1,79 +1,81 @@
 import paho.mqtt.client as mqtt
-import requests
 import json
 import ssl
+import os
+import django
+from datetime import date
+
+# --- INITIALISATION DU MOTEUR DJANGO ---
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+django.setup()
+
+from accounts.models import Employe
+from payroll.models import PresenceManuelle
+from attendance.models import PointageIoT  # 👈 CORRIGÉ : Le bon nom de ton modèle !
 
 # --- CONFIGURATION HIVEMQ ---
 BROKER = "c69c5ab4c09848f88fe18d9374121871.s1.eu.hivemq.cloud"
 PORT = 8883
+
+# Tes identifiants Wokwi
 USER = "davincii5"
 PASS = "Davincii123456"
 TOPIC = "sirh/attendance"
 
-# --- CONFIGURATION API DJANGO ---
-DJANGO_API_URL = "http://127.0.0.1:8000/api/attendance/iot/upload/"
-API_KEY = "SMART_ENTERPRISE_KEY_2026"
-
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print("✅ Connecté à HiveMQ Cloud avec succès !")
+        print("📡 Connecté au broker HiveMQ avec succès ! (Code 0)")
         client.subscribe(TOPIC)
-        print(f"📡 En écoute sur le topic : {TOPIC}\n")
+        print("⏳ En attente des badges RFID depuis Wokwi...")
     else:
-        print(f"❌ Échec de la connexion, code d'erreur : {rc}")
+        print(f"❌ Échec de connexion (Code {rc}). Vérifie ton USER et ton PASS !")
 
 def on_message(client, userdata, msg):
-    payload = msg.payload.decode('utf-8')
-    print(f"📥 Nouveau pointage détecté : {payload}")
-    
     try:
-        raw_data = json.loads(payload)
+        # On lit le JSON envoyé par Wokwi
+        payload = msg.payload.decode().strip()
+        data = json.loads(payload)
         
-        # --- CORRECTION ICI ---
-        # On transforme les données pour qu'elles correspondent à ton Serializer
-        # On envoie 'matricule' dans le champ 'employe'
-        formatted_data = {
-            "employe": raw_data.get("matricule"), 
-            "id_capteur": raw_data.get("id_capteur"),
-            "timestamp": raw_data.get("timestamp"),
-            "type_pointage": raw_data.get("type_pointage"),
-            "est_justifie": raw_data.get("est_justifie", False)
-        }
-        
-        headers = {
-            'X-IoT-Key': API_KEY,
-            'Content-Type': 'application/json'
-        }
-        
-        # On envoie formatted_data au lieu de raw_data
-        response = requests.post(DJANGO_API_URL, json=formatted_data, headers=headers)
-        
-        if response.status_code == 201:
-            print("🟢 Succès : Pointage inséré dans la base de données Django !\n")
-        else:
-            print(f"🔴 Erreur Django ({response.status_code}) : {response.text}\n")
-            
+        matricule_recu = data.get("matricule", "")
+        type_pointage = data.get("type_pointage", "ENTREE")
+        id_capteur_recu = data.get("id_capteur", "ESP32_INCONNU") # 👈 NOUVEAU : On gère le capteur
+
+        print(f"\n🔔 Badge scanné : {matricule_recu} ({type_pointage})")
+
+        # On cherche l'employé
+        employe = Employe.objects.get(matricule=matricule_recu)
+
+        # 1. On crée la bulle verte pour la RH
+        PresenceManuelle.objects.update_or_create(
+            employe=employe,
+            date_jour=date.today(),
+            defaults={'statut': 'PRESENT'}
+        )
+        print(f"✅ {employe.username} marqué PRÉSENT dans la grille RH.")
+
+        # 2. On crée l'historique Live pour le Dashboard IoT
+        PointageIoT.objects.create(  # 👈 CORRIGÉ : On utilise le bon modèle
+            employe=employe,
+            type_pointage=type_pointage,
+            id_capteur=id_capteur_recu,
+            est_justifie=False
+        )
+        print(f"✅ Pointage ajouté dans le flux Live !")
+
+    except Employe.DoesNotExist:
+        print(f"❌ Erreur : Aucun employé avec le matricule '{matricule_recu}'")
     except json.JSONDecodeError:
-        print("⚠️ Erreur : Le message reçu n'est pas un JSON valide.\n")
-    except requests.exceptions.ConnectionError:
-        print("⚠️ Erreur : Impossible de contacter Django. Le serveur (runserver) est-il allumé ?\n")
+        print(f"⚠️ Erreur : Ce n'est pas un JSON valide -> {payload}")
+    except Exception as e:
+        print(f"⚠️ Erreur système : {e}")
 
-# --- INITIALISATION DU CLIENT ---
-# Utilisation de la version 2 du protocole Callback pour éviter le DeprecationWarning
-client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1, client_id="Bridge_SIRH_Python")
-
-client.tls_set(tls_version=ssl.PROTOCOL_TLS)
+client = mqtt.Client()
 client.username_pw_set(USER, PASS)
+client.tls_set(tls_version=ssl.PROTOCOL_TLS)
 
 client.on_connect = on_connect
 client.on_message = on_message
 
-print("⏳ Lancement du Bridge IoT...")
-print("Tentative de connexion vers le cluster HiveMQ...")
-
+print("🚀 Démarrage du pont MQTT...")
 client.connect(BROKER, PORT, 60)
-
-try:
-    client.loop_forever()
-except KeyboardInterrupt:
-    print("\n🛑 Arrêt manuel du Bridge.")
+client.loop_forever()
