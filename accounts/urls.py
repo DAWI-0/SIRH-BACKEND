@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     CreateEmployeView, 
     CreateManagerRHView, 
-    EmployeListView, 
+    EmployeListView,
+    DashboardStatsView,
     EmployeDetailView,
     get_archives # 👇 NOUVEAU : Import de la fonction
 )
@@ -19,6 +20,6 @@ urlpatterns = [
     # L'URL attend l'ID (UUID) de l'employé
     path('employes/<uuid:pk>/', EmployeDetailView.as_view(), name='detail-employe'),
 
-    # 👇 CORRECTION ICI : Pas de .as_view() car get_archives est une fonction
     path('archives/', get_archives, name='get_archives'),
+    path('dashboard-stats/', DashboardStatsView.as_view(), name='dashboard-stats'),
 ]

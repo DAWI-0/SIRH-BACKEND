@@ -2,6 +2,7 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from decimal import Decimal, InvalidOperation
 from datetime import date
@@ -178,15 +179,18 @@ class CongeListCreateView(generics.ListCreateAPIView):
 class CongeDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Conge.objects.all()
     serializer_class = CongeSerializer
+    # Assurez-vous que l'authentification est requise
+    permission_classes = [IsAuthenticated] 
 
-    def update(self, request, *args, **kwargs):
+    def patch(self, request, *args, **kwargs):
         user = self.request.user
-        if not (user.is_staff or getattr(user, 'role', '') in ['RH', 'ADMIN']):
+        
+        # Vérification stricte du rôle
+        if not (user.is_staff or getattr(user, 'role', '') in ['RH', 'ADMIN', 'ADMINISTRATEUR']):
             return Response({"error": "Seul un manager RH peut valider un congé."}, status=status.HTTP_403_FORBIDDEN)
             
         kwargs['partial'] = True 
         return super().update(request, *args, **kwargs)
-
 class PointageVirtuelView(APIView):
     def post(self, request):
         try:
