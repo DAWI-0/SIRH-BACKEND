@@ -3,7 +3,8 @@ from .views import (
     CreateEmployeView, 
     CreateManagerRHView, 
     EmployeListView, 
-    EmployeDetailView
+    EmployeDetailView,
+    get_archives # 👇 NOUVEAU : Import de la fonction
 )
 
 urlpatterns = [
@@ -17,4 +18,7 @@ urlpatterns = [
     # Lecture spécifique, Modification et Suppression (Read, Update, Delete)
     # L'URL attend l'ID (UUID) de l'employé
     path('employes/<uuid:pk>/', EmployeDetailView.as_view(), name='detail-employe'),
+
+    # 👇 CORRECTION ICI : Pas de .as_view() car get_archives est une fonction
+    path('archives/', get_archives, name='get_archives'),
 ]

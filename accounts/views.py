@@ -1,8 +1,11 @@
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-# 👇 CORRECTION : Il manquait l'import de 'status' pour la réponse HTTP
 from rest_framework import status 
+
+# 👇 NOUVEAU : Imports pour la vue des archives basée sur une fonction
+from rest_framework.decorators import api_view, permission_classes
+
 import requests
 
 # Imports pour le Token
@@ -11,11 +14,12 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import Employe, ManagerRH, Administrateur, ArchiveEmploye
 from .serializers import EmployeSerializer, ManagerRHSerializer
+from .serializers import ArchiveEmployeSerializer
 from .permissions import IsAdministrateur, IsAdminOrRH, IsChefDepartementOrRH
 from organization.models import Departement
 
 
-# --- TES VUES EXISTANTES ---
+# --- VUES EXISTANTES ---
 
 class CreateEmployeView(generics.CreateAPIView):
     queryset = Employe.objects.all()
@@ -53,12 +57,15 @@ class EmployeDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         nouveau_statut = request.data.get('statut')
+        date_depart_frontend = request.data.get('date_depart')
         
         # Liste des statuts qui signifient que l'employé quitte l'entreprise
         statuts_de_depart = ['DEMISSIONNAIRE', 'LICENCIE']
         
         if nouveau_statut in statuts_de_depart:
             employe = self.get_object()
+            import datetime
+            final_date = date_depart_frontend if date_depart_frontend else datetime.date.today()
             
             # 1. ARCHIVAGE : On sauvegarde l'historique avec la raison du départ
             ArchiveEmploye.objects.create(
@@ -67,7 +74,8 @@ class EmployeDetailView(generics.RetrieveUpdateDestroyAPIView):
                 poste_titre=employe.poste_titre,
                 departement_nom=employe.departement.nom_departement if hasattr(employe, 'departement') and employe.departement else "Non assigné",
                 statut_depart=nouveau_statut,
-                matrice_competences_archive=employe.matrice_competences
+                matrice_competences_archive=employe.matrice_competences, # 👇 CORRECTION : Virgule ajoutée ici
+                date_depart=final_date
             )
 
             # 2. AUTOMATISATION n8n : On précise le motif à n8n !
@@ -95,7 +103,36 @@ class EmployeDetailView(generics.RetrieveUpdateDestroyAPIView):
         else:
             # Si ce n'est pas un départ, on met simplement à jour
             return super().update(request, *args, **kwargs)
+
+
+# --- NOUVELLE VUE : RÉCUPÉRATION DES ARCHIVES ---
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_archives(request):
+    # Récupère le motif depuis l'URL envoyé par React (ex: ?motif=Licenciement)
+    motif = request.GET.get('motif', '').upper()
     
+    # Mapping pour faire correspondre les mots du frontend avec votre BDD exacte
+    statut_mapping = {
+        'LICENCIEMENT': 'LICENCIE',
+        'DÉMISSION': 'DEMISSIONNAIRE',
+        'DEMISSION': 'DEMISSIONNAIRE'
+    }
+    
+    if motif in statut_mapping:
+        # On filtre par le vrai statut de la base de données (ex: 'LICENCIE')
+        archives = ArchiveEmploye.objects.filter(statut_depart=statut_mapping[motif])
+    elif motif:
+        # Sécurité supplémentaire au cas où
+        archives = ArchiveEmploye.objects.filter(statut_depart__icontains=motif)
+    else:
+        # Si aucun motif n'est précisé, on renvoie tout
+        archives = ArchiveEmploye.objects.all()
+        
+    serializer = ArchiveEmployeSerializer(archives, many=True)
+    return Response(serializer.data)
+
 
 # --- PERSONNALISATION DU TOKEN JWT SÉCURISÉE ---
 

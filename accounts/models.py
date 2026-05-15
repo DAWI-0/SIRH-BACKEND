@@ -81,7 +81,7 @@ class ArchiveEmploye(models.Model):
     matricule = models.CharField(max_length=50)
     poste_titre = models.CharField(max_length=100, null=True, blank=True)
     departement_nom = models.CharField(max_length=100, null=True, blank=True)
-    date_depart = models.DateTimeField(auto_now_add=True)
+    date_depart = models.DateField(null=True, blank=True)
     
     # C'est ce champ qui nous dira POURQUOI il est dans les archives
     statut_depart = models.CharField(max_length=50, choices=MOTIF_DEPART_CHOICES)

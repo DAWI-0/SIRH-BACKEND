@@ -1,5 +1,6 @@
 import uuid
 from rest_framework import serializers
+from .models import ArchiveEmploye
 from .models import Employe, ManagerRH
 from organization.models import Departement
 # Assure-toi que ton modèle Contrat est bien importé si nécessaire, 
@@ -86,3 +87,9 @@ class ManagerRHSerializer(serializers.ModelSerializer):
         manager.is_staff = True
         manager.save()
         return manager
+
+class ArchiveEmployeSerializer(serializers.ModelSerializer):
+    date_depart = serializers.DateField(format="%Y-%m-%d", required=False)
+    class Meta:
+        model = ArchiveEmploye
+        fields = '__all__' 

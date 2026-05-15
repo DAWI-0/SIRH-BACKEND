@@ -6,7 +6,9 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from organization.models import Departement
-from accounts.models import Employe
+from accounts.models import Employe, ArchiveEmploye
+from payroll.models import FichePaie, PresenceManuelle, Conge, Contrat
+from attendance.models import PointageIoT
 from django.db import transaction
 
 # Base de données simulée : Sarah est RH, les autres chefs sont EMPLOYE
@@ -96,7 +98,14 @@ ENTREPRISE_DATA = {
 
 @transaction.atomic
 def run_seed():
-    print("🧹 Nettoyage de la base de données...")
+    print("🧹 Nettoyage PROFOND de la base de données...")
+    # 👇 NOUVEAUTÉ : On vide TOUT l'historique avant de recréer !
+    ArchiveEmploye.objects.all().delete()
+    FichePaie.objects.all().delete()
+    PresenceManuelle.objects.all().delete()
+    Conge.objects.all().delete()
+    Contrat.objects.all().delete()
+    PointageIoT.objects.all().delete()
     Employe.objects.all().delete()
     Departement.objects.all().delete()
 
@@ -116,7 +125,7 @@ def run_seed():
             matricule=f"EMP-{matricule_counter:03d}",
             poste_titre=chef_data["poste"],
             departement=dept,
-            role=chef_data["role"], # Sarah sera RH, les autres EMPLOYE
+            role=chef_data["role"], 
             salaire=chef_data["salaire"],
             type_contrat=chef_data["contrat"],
             statut="ACTIF",
@@ -126,7 +135,7 @@ def run_seed():
         chef.save()
         matricule_counter += 1
 
-        # Assigner le chef au département ! C'est ce qui te permettra de gérer tes autorisations
+        # Assigner le chef au département ! 
         dept.manager = chef
         dept.save()
 
@@ -148,7 +157,7 @@ def run_seed():
             emp.save()
             matricule_counter += 1
             
-    print(f"\n🚀 SUCCÈS ! Profils créés. Sarah est RH, les autres sont Employés.")
+    print(f"\n🚀 SUCCÈS ! Profils créés. La base de données est complètement propre.")
 
 # Lancement automatique pour ta commande shell
 run_seed()
