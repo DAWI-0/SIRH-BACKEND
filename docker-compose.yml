@@ -24,6 +24,7 @@ services:
       - N8N_BASIC_AUTH_PASSWORD=admin
     volumes:
       - n8n_data:/home/node/.n8n
+      - ./:/home/node/sirh_data   # <--- LA LIGNE MAGIQUE DU PONT !
     depends_on:
       - db
 
