@@ -17,4 +17,5 @@ urlpatterns = [
     
     # LA LIGNE MAGIQUE QUI MANQUAIT 
     path('api/payroll/', include('payroll.urls')), 
+    path('api/chat/', include('chat.urls')), 
 ]
